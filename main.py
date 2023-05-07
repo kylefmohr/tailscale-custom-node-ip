@@ -10,6 +10,8 @@ TAILSCALE_API_KEY = "tskey-api-<REDACTED>"  # click "Generate access token" on t
 TAILSCALE_REUSABLE_AUTH_KEY = "tskey-auth-<REDACTED>"  # click "Generate auth key", then *CHECK REUSABLE*, all other settings can be default: https://login.tailscale.com/admin/settings/keys
 DESIRED_IP_PREFIXES = ["100.100", "100.69"]  # expects a list of IP Prefixes to search for, meaning the first two octets of the IPv4. Must be within the Tailscale subnet of 100.64.0.0/10
 
+# optional
+API_DELAY = 2.5  # seconds, multiply by how many hosts you're running this on concurrently
 
 for ip in DESIRED_IP_PREFIXES:
     #  Verify that the IP addresses are in the 100.64.0.0/10 range.
@@ -75,15 +77,17 @@ def change_ip():
     return device_ip
 
 
+def ip_found():
+    device_ip = get_device_ip(HOSTNAME_TO_CHANGE)
+    device_ip_prefix = device_ip.split(".")[0] + "." + device_ip.split(".")[1]
+    if device_ip_prefix in DESIRED_IP_PREFIXES:
+        print("IP found: " + device_ip)
+        return True
+    else:
+        return False
+
+
 if __name__ == "__main__":
-    device_ip = ""
-    while True:
-        if len(device_ip) > 0:
-            device_ip_prefix = device_ip.split(".")[0] + "." + device_ip.split(".")[1]
-            if device_ip_prefix not in DESIRED_IP_PREFIXES:
-                device_ip = change_ip()
-            else:
-                print("Found IP, exiting! : " + str(device_ip))
-                exit(0)
-        else:
-            device_ip = change_ip()
+    while not ip_found():
+        change_ip()
+        time.sleep(API_DELAY)
